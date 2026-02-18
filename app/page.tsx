@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import type { EmployeeWithLeave } from "@/lib/leave";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 type LeaveFormState = {
   date: string;
@@ -208,11 +209,14 @@ export default function HomePage() {
       <div className="mx-auto max-w-6xl px-4 py-8">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
+            <Image src="/noonan-logo.png" width={120} height={40} alt="Noonan Logo" className="mt-2"/>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              Noonan Leave Tracker
+              Leave Tracker
             </h1>
+            
+
             <p className="mt-1 text-sm text-slate-400">
-              Accrual is based on hire date and updates automatically to today.
+              Time Off Awarded is based on hire date and updates automatically to today.
               Data source:&nbsp;
               <code className="rounded bg-slate-900 px-1.5 py-0.5 text-xs">
                 Google Sheet (Employees &amp; Leaves)
@@ -224,7 +228,7 @@ export default function HomePage() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex flex-col items-end gap-1 rounded-xl bg-slate-900 px-4 py-2 text-xs text-slate-300">
               <span className="font-mono">Today: {isoToday}</span>
-              <span>Accrual: 0.83 day / full month</span>
+              <span>Time Off Awarded: 0.83 day / full month</span>
               <span className="text-[11px] text-slate-400">
                 Role: {role}
                 {sessionEmployeeId
@@ -257,7 +261,7 @@ export default function HomePage() {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold">Employees – Leave Overview</h2>
             <p className="text-xs text-slate-400 max-w-md">
-              Leave accrues at 0.83 day per full month from hire date (with
+              Leave for Time Off Awarded is at 0.83 day per full month from hire date (with
               carryover). Employees can only use leave after 6 full months.
               Sheehan can record leave taken below to update balances.
             </p>
@@ -269,9 +273,9 @@ export default function HomePage() {
                 <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
                   <th className="px-3 py-2">Employee</th>
                   <th className="px-3 py-2">Position</th>
-                  <th className="px-3 py-2">Hire / Tenure</th>
-                  <th className="px-3 py-2">Accrued</th>
-                  <th className="px-3 py-2">Taken</th>
+                  <th className="px-3 py-2">Contract Start</th>
+                  <th className="px-3 py-2">Time Off Awarded</th>
+                  <th className="px-3 py-2">Claimed</th>
                   <th className="px-3 py-2">Balance</th>
                   <th className="px-3 py-2">Eligibility</th>
                   <th className="px-3 py-2">Record Leave</th>
