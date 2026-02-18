@@ -2,49 +2,49 @@
 import { google } from "googleapis";
 import type { EmployeeRaw, LeaveEntry } from "./leave";
 
-// Import your service account JSON directly (file must be in project root)
-import serviceAccount from "../noonan-leave-tracker-c097e5e73e07.json";
-
-type ServiceAccount = {
-  client_email: string;
-  private_key: string;
-};
-
-const sa = serviceAccount as ServiceAccount;
-
-// ✅ Your spreadsheet ID from the URL:
+// ✅ Spreadsheet ID from the URL:
 // https://docs.google.com/spreadsheets/d/THIS_ID/edit
-const SPREADSHEET_ID = "1OE6gwRSwdZ7C-YVyP-2ai58CiHSh9G4Y1dqRBPHuYtY";
+const SPREADSHEET_ID =
+  process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "";
 
 // ✅ Sheet/tab names & ranges
-const EMPLOYEES_RANGE = "Employees!A2:E"; // id, fullName, position, hireDate, startingBalance
-const LEAVES_RANGE = "Leaves!A2:E";       // employeeId, date, days, type, note
+const EMPLOYEES_RANGE = "Employees!A2:E";          // id, fullName, position, hireDate, startingBalance
+const LEAVES_RANGE = "Leaves!A2:E";                // employeeId, date, days, type, note
 const LEAVE_REQUESTS_RANGE = "LeaveRequests!A2:G"; // employeeId, date, days, type, note, status, requestedBy
 
-const SERVICE_ACCOUNT_EMAIL = sa.client_email;
-const SERVICE_ACCOUNT_PRIVATE_KEY = sa.private_key;
+// ✅ Service account credentials from env
+const SERVICE_ACCOUNT_EMAIL =
+  process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
+
+// Important: handle both single-line (\n) and multiline keys
+const SERVICE_ACCOUNT_PRIVATE_KEY = (
+  process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || ""
+).replace(/\\n/g, "\n");
 
 function getSheetsClient() {
   console.log("Using Sheets config:", {
     SPREADSHEET_ID,
     SERVICE_ACCOUNT_EMAIL,
-    hasPrivateKey: !!SERVICE_ACCOUNT_PRIVATE_KEY
+    hasPrivateKey: !!SERVICE_ACCOUNT_PRIVATE_KEY,
   });
 
-  if (!SPREADSHEET_ID || !SERVICE_ACCOUNT_EMAIL || !SERVICE_ACCOUNT_PRIVATE_KEY) {
+  if (
+    !SPREADSHEET_ID ||
+    !SERVICE_ACCOUNT_EMAIL ||
+    !SERVICE_ACCOUNT_PRIVATE_KEY
+  ) {
     console.error("Google Sheets config missing", {
       SPREADSHEET_ID,
       SERVICE_ACCOUNT_EMAIL,
-      hasPrivateKey: !!SERVICE_ACCOUNT_PRIVATE_KEY
+      hasPrivateKey: !!SERVICE_ACCOUNT_PRIVATE_KEY,
     });
     throw new Error("Google Sheets is not configured.");
   }
 
   const auth = new google.auth.JWT({
     email: SERVICE_ACCOUNT_EMAIL,
-    // Value from JSON already has proper newlines
     key: SERVICE_ACCOUNT_PRIVATE_KEY,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
   const sheets = google.sheets({ version: "v4", auth });
@@ -58,7 +58,7 @@ export async function fetchEmployeesFromSheet(): Promise<EmployeeRaw[]> {
     // Read Employees sheet (skip header row)
     const employeesRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: EMPLOYEES_RANGE
+      range: EMPLOYEES_RANGE,
     });
 
     const employeeRows = employeesRes.data.values || [];
@@ -72,14 +72,14 @@ export async function fetchEmployeesFromSheet(): Promise<EmployeeRaw[]> {
         position: String(position ?? ""),
         hireDate: String(hireDate), // YYYY-MM-DD
         startingBalance: startingBalance ? Number(startingBalance) : 0,
-        leaveTaken: []
+        leaveTaken: [],
       };
     });
 
     // Read Leaves sheet
     const leavesRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: LEAVES_RANGE
+      range: LEAVES_RANGE,
     });
 
     const leaveRows = leavesRes.data.values || [];
@@ -93,7 +93,7 @@ export async function fetchEmployeesFromSheet(): Promise<EmployeeRaw[]> {
         date: String(date),
         days: Number(days),
         type: String(type),
-        note: note ? String(note) : undefined
+        note: note ? String(note) : undefined,
       };
 
       const key = String(employeeId);
@@ -124,8 +124,16 @@ export async function appendLeaveToSheet(
       range: "Leaves!A:E",
       valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [[employeeId, entry.date, entry.days, entry.type, entry.note ?? ""]]
-      }
+        values: [
+          [
+            employeeId,
+            entry.date,
+            entry.days,
+            entry.type,
+            entry.note ?? "",
+          ],
+        ],
+      },
     });
   } catch (err) {
     console.error("Error appending to Leaves sheet:", err);
@@ -133,7 +141,7 @@ export async function appendLeaveToSheet(
   }
 }
 
-// 👇 NEW: used when a MEMBER submits a leave request (Pending, not yet approved)
+// 👇 Used when a MEMBER submits a leave request (Pending, not yet approved)
 export async function appendLeaveRequestToSheet(
   employeeId: string,
   entry: LeaveEntry,
@@ -155,10 +163,10 @@ export async function appendLeaveRequestToSheet(
             entry.type,
             entry.note ?? "",
             "Pending",
-            requestedBy
-          ]
-        ]
-      }
+            requestedBy,
+          ],
+        ],
+      },
     });
   } catch (err) {
     console.error("Error appending to LeaveRequests sheet:", err);
