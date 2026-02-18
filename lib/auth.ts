@@ -5,12 +5,12 @@ import CredentialsProvider from "next-auth/providers/credentials";
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 
-  session: {
-    strategy: "jwt",
-  },
-
   pages: {
     signIn: "/login",
+  },
+
+  session: {
+    strategy: "jwt",
   },
 
   providers: [
@@ -21,41 +21,34 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.username || !credentials?.password) return null;
 
-        const username = credentials.username;
-        const password = credentials.password;
+        const users = [
+          {
+            id: "admin-1",
+            name: "Admin",
+            username: process.env.ADMIN_USERNAME,
+            password: process.env.ADMIN_PASSWORD,
+            role: "admin" as const,
+          },
+          {
+            id: "member-1",
+            name: "Member One",
+            username: process.env.MEMBER1_USERNAME,
+            password: process.env.MEMBER1_PASSWORD,
+            role: "member" as const,
+            employeeId: process.env.MEMBER1_EMPLOYEE_ID,
+          },
+        ].filter((u) => u.username && u.password);
 
-        // Admin (Sheehan)
-        const adminUser = process.env.ADMIN_USERNAME;
-        const adminPass = process.env.ADMIN_PASSWORD;
+        const user = users.find(
+          (u) =>
+            u.username === credentials.username &&
+            u.password === credentials.password
+        );
 
-        if (username === adminUser && password === adminPass) {
-          return {
-            id: "admin",
-            name: "Sheehan",
-            role: "admin",
-          } as any;
-        }
-
-        // Member #1 (Ross / N001)
-        const member1User = process.env.MEMBER1_USERNAME;
-        const member1Pass = process.env.MEMBER1_PASSWORD;
-        const member1EmployeeId = process.env.MEMBER1_EMPLOYEE_ID;
-
-        if (username === member1User && password === member1Pass) {
-          return {
-            id: member1EmployeeId || "member1",
-            name: "Member",
-            role: "member",
-            employeeId: member1EmployeeId,
-          } as any;
-        }
-
-        // Invalid credentials
-        return null;
+        if (!user) return null;
+        return user;
       },
     }),
   ],
@@ -63,9 +56,8 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const u = user as any;
-        token.role = u.role;
-        token.employeeId = u.employeeId;
+        token.role = (user as any).role;
+        token.employeeId = (user as any).employeeId;
       }
       return token;
     },
