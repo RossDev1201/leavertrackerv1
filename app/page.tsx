@@ -209,15 +209,20 @@ export default function HomePage() {
       <div className="mx-auto max-w-6xl px-4 py-8">
         <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <Image src="/noonan-logo.png" width={120} height={40} alt="Noonan Logo" className="mt-2"/>
+            <Image
+              src="/noonan-logo.png"
+              width={120}
+              height={40}
+              alt="Noonan Logo"
+              className="mt-2"
+            />
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
               Leave Tracker
             </h1>
-            
 
             <p className="mt-1 text-sm text-slate-400">
-              Time Off Awarded is based on hire date and updates automatically to today.
-              Data source:&nbsp;
+              Time Off Awarded is based on hire date and updates automatically
+              to today. Data source:&nbsp;
               <code className="rounded bg-slate-900 px-1.5 py-0.5 text-xs">
                 Google Sheet (Employees &amp; Leaves)
               </code>
@@ -261,9 +266,10 @@ export default function HomePage() {
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-semibold">Employees – Leave Overview</h2>
             <p className="text-xs text-slate-400 max-w-md">
-              Leave for Time Off Awarded is at 0.83 day per full month from hire date (with
-              carryover). Employees can only use leave after 6 full months.
-              Sheehan can record leave taken below to update balances.
+              Leave for Time Off Awarded is at 0.83 day per full month from
+              hire date (with carryover). Employees can only use leave after 6
+              full months. Sheehan can record leave taken below to update
+              balances.
             </p>
           </div>
 
@@ -284,10 +290,14 @@ export default function HomePage() {
               <tbody>
                 {employees.map((emp) => {
                   const form = forms[emp.id] ?? makeInitialForm();
-                  const accrued = Number(emp.accruedLeave ?? 0);
-                  const taken = Number(emp.leaveTakenTotal ?? 0);
-                  const balance = Number(emp.leaveBalance ?? 0);
-                  const availableToUse = Number(emp.availableLeaveToUse ?? 0);
+
+                  // 🔢 lifetime values from the computation
+                  const accrued = Number(emp.accruedLeave ?? 0); // lifetime accrual
+                  const taken = Number(emp.leaveTakenTotal ?? 0); // lifetime taken
+                  const lifetimeBalance = Number(emp.leaveBalance ?? 0); // lifetime balance
+                  const availableToUse = Number(
+                    emp.availableLeaveToUse ?? 0
+                  ); // usable now (per rules)
 
                   return (
                     <tr
@@ -330,16 +340,24 @@ export default function HomePage() {
                         </span>
                       </td>
 
+                      {/* BALANCE – show usable now, plus tiny lifetime note */}
                       <td className="px-3 py-3">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            balance < 0
-                              ? "bg-rose-500/10 text-rose-300"
-                              : "bg-sky-500/10 text-sky-300"
-                          }`}
-                        >
-                          {balance.toFixed(2)}
-                        </span>
+                        <div className="flex flex-col">
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                              availableToUse < 0
+                                ? "bg-rose-500/10 text-rose-300"
+                                : "bg-sky-500/10 text-sky-300"
+                            }`}
+                          >
+                            {emp.canUseLeave
+                              ? availableToUse.toFixed(2)
+                              : "0.00"}
+                          </span>
+                          <span className="mt-0.5 text-[11px] text-slate-500">
+                            Lifetime balance: {lifetimeBalance.toFixed(2)}d
+                          </span>
+                        </div>
                       </td>
 
                       <td className="px-3 py-3 text-xs sm:text-sm">
@@ -362,6 +380,10 @@ export default function HomePage() {
                             </span>
                             <span className="text-[11px] text-slate-400">
                               Full months so far: {emp.fullMonthsTenure}
+                            </span>
+                            <span className="text-[11px] text-slate-500">
+                              Leave is accruing and will be available after 6
+                              full months.
                             </span>
                           </div>
                         )}
