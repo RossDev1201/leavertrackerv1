@@ -1,6 +1,7 @@
 // lib/auth.ts
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { fetchLoginUsersFromSheet } from "@/lib/googleSheets";
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -23,23 +24,34 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null;
 
-        const users = [
-          {
-            id: "admin-1",
-            name: "Admin",
-            username: process.env.ADMIN_USERNAME,
-            password: process.env.ADMIN_PASSWORD,
-            role: "admin" as const,
-          },
-          {
-            id: "member-1",
-            name: "Member One",
-            username: process.env.MEMBER1_USERNAME,
-            password: process.env.MEMBER1_PASSWORD,
-            role: "member" as const,
-            employeeId: process.env.MEMBER1_EMPLOYEE_ID,
-          },
-        ].filter((u) => u.username && u.password);
+        // 1) Env-based admin (Sheehan) as a fallback
+        const staticAdmin =
+          process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD
+            ? [
+                {
+                  id: "admin-env",
+                  name: "Admin",
+                  username: process.env.ADMIN_USERNAME,
+                  password: process.env.ADMIN_PASSWORD,
+                  role: "admin" as const,
+                  employeeId: undefined,
+                },
+              ]
+            : [];
+
+        // 2) Users from the Logins sheet
+        const sheetUsers = await fetchLoginUsersFromSheet();
+
+        const sheetMapped = sheetUsers.map((u) => ({
+          id: `user-${u.employeeId || u.username}`,
+          name: u.username,
+          username: u.username,
+          password: u.password,
+          role: u.role,
+          employeeId: u.employeeId,
+        }));
+
+        const users = [...staticAdmin, ...sheetMapped];
 
         const user = users.find(
           (u) =>

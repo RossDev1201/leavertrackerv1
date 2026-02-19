@@ -4,17 +4,16 @@ import type { EmployeeRaw, LeaveEntry } from "./leave";
 
 // ✅ Spreadsheet ID from the URL:
 // https://docs.google.com/spreadsheets/d/THIS_ID/edit
-const SPREADSHEET_ID =
-  process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "";
+const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID || "";
 
 // ✅ Sheet/tab names & ranges
 const EMPLOYEES_RANGE = "Employees!A2:E";          // id, fullName, position, hireDate, startingBalance
 const LEAVES_RANGE = "Leaves!A2:E";                // employeeId, date, days, type, note
 const LEAVE_REQUESTS_RANGE = "LeaveRequests!A2:G"; // employeeId, date, days, type, note, status, requestedBy
+const LOGINS_RANGE = "Logins!A2:D";                // username, password, role, employeeId
 
 // ✅ Service account credentials from env
-const SERVICE_ACCOUNT_EMAIL =
-  process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
+const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || "";
 
 // Important: handle both single-line (\n) and multiline keys
 const SERVICE_ACCOUNT_PRIVATE_KEY = (
@@ -50,6 +49,8 @@ function getSheetsClient() {
   const sheets = google.sheets({ version: "v4", auth });
   return sheets;
 }
+
+// ----------------- EMPLOYEES + LEAVES -----------------
 
 export async function fetchEmployeesFromSheet(): Promise<EmployeeRaw[]> {
   const sheets = getSheetsClient();
@@ -170,6 +171,50 @@ export async function appendLeaveRequestToSheet(
     });
   } catch (err) {
     console.error("Error appending to LeaveRequests sheet:", err);
+    throw err;
+  }
+}
+
+// ----------------- LOGINS (for NextAuth) -----------------
+
+export type LoginUser = {
+  username: string;
+  password: string;
+  role: "admin" | "member";
+  employeeId?: string;
+};
+
+export async function fetchLoginUsersFromSheet(): Promise<LoginUser[]> {
+  const sheets = getSheetsClient();
+
+  try {
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: LOGINS_RANGE,
+    });
+
+    const rows = res.data.values || [];
+
+    const users: LoginUser[] = rows
+      .map((row) => {
+        const [username, password, role, employeeId] = row;
+        if (!username || !password || !role) return null;
+
+        const normalizedRole =
+          String(role).trim().toLowerCase() === "admin" ? "admin" : "member";
+
+        return {
+          username: String(username).trim(),
+          password: String(password),
+          role: normalizedRole,
+          employeeId: employeeId ? String(employeeId).trim() : undefined,
+        } as LoginUser;
+      })
+      .filter(Boolean) as LoginUser[];
+
+    return users;
+  } catch (err) {
+    console.error("Error reading Logins from Google Sheets:", err);
     throw err;
   }
 }
